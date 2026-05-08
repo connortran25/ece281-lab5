@@ -32,14 +32,39 @@ use IEEE.STD_LOGIC_1164.ALL;
 --use UNISIM.VComponents.all;
 
 entity controller_fsm is
-    Port ( i_reset : in STD_LOGIC;
+    Port ( i_clk : in STD_LOGIC;
+           i_reset : in STD_LOGIC;
            i_adv : in STD_LOGIC;
            o_cycle : out STD_LOGIC_VECTOR (3 downto 0));
 end controller_fsm;
 
 architecture FSM of controller_fsm is
-
+    type sm_state is (reset, loadA, loadB, result);
+    
+    signal current_state, next_state: sm_state;
 begin
-
-
+    -- Next state logic
+    next_state <= reset when current_state = result else
+                  loadA when current_state = reset else
+                  loadB when current_state = loadA else
+                  result when current_state = loadB else
+                  current_state; 
+    
+    -- Output logic
+    with current_state select
+    o_cycle <= "0001" when reset,
+               "0010" when loadA,
+               "0100" when loadB,
+               "1000" when result,
+               "0000" when others;
+               
+    state_register : process (i_adv, i_reset)
+    begin
+        if i_reset = '1' then
+            current_state <= reset;
+        elsif rising_edge(i_adv) then
+            current_state <= next_state;
+        else current_state <= current_state;
+        end if;
+    end process state_register;
 end FSM;
